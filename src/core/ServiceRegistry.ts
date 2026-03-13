@@ -15,6 +15,7 @@ export class ServiceRegistry extends EventEmitter {
     private preferLocal: boolean;
     private localNodeID: string;
     private dhtEnabled: boolean;
+    private pruningTimer: any;
 
     constructor(
         localNodeID: string,
@@ -23,6 +24,7 @@ export class ServiceRegistry extends EventEmitter {
             balancer?: BaseBalancer;
             preferLocal?: boolean;
             dht?: { enabled?: boolean; bucketSize?: number };
+            heartbeatTTL?: number;
         } = {}
     ) {
         super();
@@ -31,9 +33,29 @@ export class ServiceRegistry extends EventEmitter {
         this.preferLocal = options.preferLocal ?? true;
         this.dhtEnabled = options.dht?.enabled ?? false;
 
+        const ttl = options.heartbeatTTL ?? 30000;
+        this.pruningTimer = setInterval(() => this.pruneStaleNodes(ttl), 10000);
+
         if (this.dhtEnabled) {
             this.dht = new KademliaRoutingTable(localNodeID, options.dht?.bucketSize ?? 20);
         }
+    }
+
+    private pruneStaleNodes(ttl: number): void {
+        const now = Date.now();
+        for (const [nodeID, node] of this.nodes.entries()) {
+            if (nodeID === this.localNodeID) continue;
+            
+            const lastHb = node.lastHeartbeatTime || node.timestamp || 0;
+            if (now - lastHb > ttl) {
+                this.logger.warn(`Node ${nodeID} timed out. Pruning from registry.`);
+                this.unregisterNode(nodeID);
+            }
+        }
+    }
+
+    public stop(): void {
+        if (this.pruningTimer) clearInterval(this.pruningTimer);
     }
 
     /**
