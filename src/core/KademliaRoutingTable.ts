@@ -12,7 +12,7 @@ export class KademliaRoutingTable {
     constructor(localNodeID: string, bucketSize = 20) {
         this.localNodeID = localNodeID;
         this.bucketSize = bucketSize;
-        // Initialize 160 buckets for SHA-1/SHA-256 bits (or 256)
+        // Initialize 256 buckets for XOR distance
         for (let i = 0; i < 256; i++) {
             this.buckets[i] = [];
         }
@@ -28,13 +28,10 @@ export class KademliaRoutingTable {
         const existingIndex = bucket.findIndex(n => n.nodeID === info.nodeID);
         if (existingIndex !== -1) {
             bucket[existingIndex] = info; // Update
-            // Move to end (most recently seen)
             const node = bucket.splice(existingIndex, 1)[0];
             bucket.push(node);
         } else if (bucket.length < this.bucketSize) {
             bucket.push(info);
-        } else {
-            // Bucket full - logic for pinging oldest would go here
         }
     }
 
@@ -66,8 +63,6 @@ export class KademliaRoutingTable {
     }
 
     findNodesForService(serviceName: string, count: number): NodeInfo[] {
-        // In a real DHT, we'd hash the service name to find the closest nodes
-        // For now, we search our routing table
         const results: NodeInfo[] = [];
         for (const bucket of this.buckets) {
             for (const node of bucket) {
@@ -81,8 +76,6 @@ export class KademliaRoutingTable {
     }
 
     private getDistance(id1: string, id2: string): bigint {
-        // Simplified XOR distance: assuming IDs are hex strings
-        // In production, we'd use SHA-256 hashes of the strings
         const b1 = BigInt('0x' + this.toHex(id1));
         const b2 = BigInt('0x' + this.toHex(id2));
         return b1 ^ b2;
@@ -90,15 +83,16 @@ export class KademliaRoutingTable {
 
     private getBucketIndex(distance: bigint): number {
         if (distance === 0n) return 0;
-        return distance.toString(2).length - 1;
+        return Math.min(255, distance.toString(2).length - 1);
     }
 
     private toHex(str: string): string {
-        // Very basic string to hex converter for distance calculation
         let res = '';
         for (let i = 0; i < str.length; i++) {
-            res += str.charCodeAt(i).toString(16);
+            // FIX: Pad with leading zero to ensure proper byte alignment in XOR distance
+            res += str.charCodeAt(i).toString(16).padStart(2, '0');
         }
+        // Ensure fixed length for consistent BigInt comparison
         return res.padEnd(64, '0').slice(0, 64);
     }
 }
