@@ -19,21 +19,24 @@ export type ServiceState =
     | 'pausing'
     | 'paused';
 
+export interface Context<TParams = unknown, TMeta = Record<string, unknown>> {
+    readonly id: string;
+    readonly actionName: string;
+    readonly params: TParams;
+    readonly meta: TMeta;
+    readonly callerID: string | null;
+    readonly nodeID: string;
+
+    call<TResult = unknown>(action: string, params: unknown): Promise<TResult>;
+    emit(event: string, payload: unknown): void;
+}
+
 export interface ActionSchema<TParams = Record<string, unknown>, TResult = unknown> extends ActionInfo {
-    handler: (ctx: IExecutionContext<TParams>) => Promise<TResult> | TResult;
+    handler: (ctx: Context<TParams>) => Promise<TResult> | TResult;
 }
 
 export interface EventSchema<TParams = Record<string, unknown>> extends EventInfo {
-    handler: (ctx: IExecutionContext<TParams>) => void | Promise<void>;
-}
-
-export interface IExecutionContext<TParams = Record<string, unknown>> {
-    params: TParams;
-    meta: Record<string, unknown>;
-    nodeID: string;
-    action?: string;
-    event?: string;
-    caller?: string;
+    handler: (ctx: Context<TParams>) => void | Promise<void>;
 }
 
 export interface ServiceSchema {
@@ -41,8 +44,8 @@ export interface ServiceSchema {
     version?: string | number;
     settings?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
-    actions?: Record<string, ActionSchema<any, any> | ((ctx: IExecutionContext<any>) => any)>;
-    events?: Record<string, EventSchema<any> | ((ctx: IExecutionContext<any>) => void | Promise<void>)>;
+    actions?: Record<string, ActionSchema<any, any> | ((ctx: Context<any>) => any)>;
+    events?: Record<string, EventSchema<any> | ((ctx: Context<any>) => void | Promise<void>)>;
     methods?: Record<string, (...args: any[]) => any>;
     dependencies?: string[];
 
