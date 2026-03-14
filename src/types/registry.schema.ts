@@ -11,6 +11,8 @@ export const ActionInfoSchema = z.object({
     rest: z.record(z.unknown()).optional(),
     roles: z.array(z.string()).optional(),
     matchAny: z.boolean().optional(),
+    highSecurity: z.boolean().optional(),
+    metadata: z.record(z.unknown()).optional(),
 });
 
 export type ActionInfo = z.infer<typeof ActionInfoSchema>;
