@@ -6,7 +6,7 @@ import { z } from 'zod';
  */
 export const ActionInfoSchema = z.object({
     name: z.string().optional(),
-    visibility: z.enum(['public', 'user', 'internal', 'published', 'protected', 'private']).default('public'),
+    visibility: z.enum(['public', 'user', 'internal', 'published', 'protected', 'private']).optional(),
     params: z.record(z.unknown()).optional(),
     rest: z.record(z.unknown()).optional(),
     roles: z.array(z.string()).optional(),
